@@ -1,14 +1,14 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from app.schemas.chat import ChatRequest, ChatResponse
 from app.ai.chat import generate_reply
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi import FastAPI
 
-app = FastAPI()
+app = FastAPI(title="AI Chatbot API")
 
 
 origins = [
-    "https://akofisher.github.io",
+    "http://localhost:5173",       
+    "https://akofisher.github.io", 
     "https://www.akofisher.github.io",
 ]
 
@@ -20,9 +20,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-
-app = FastAPI(title="AI Chatbot API")
 
 @app.post("/chat", response_model=ChatResponse)
 def chat(payload: ChatRequest):

@@ -5,11 +5,15 @@ from app.ai.persona import PERSONA
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
 def generate_reply(message: str) -> str:
+    if not OPENROUTER_API_KEY:
+        return "Server error: API key missing"
+
     response = requests.post(
         "https://api.openrouter.ai/v1/chat/completions",
         headers={
             "Authorization": f"Bearer {OPENROUTER_API_KEY}",
             "Content-Type": "application/json",
+            "User-Agent": "AkoPortfolioChat/1.0",  
         },
         json={
             "model": "openai/gpt-3.5-turbo",
@@ -18,7 +22,7 @@ def generate_reply(message: str) -> str:
                 {"role": "user", "content": message},
             ],
         },
-        timeout=20,
+        timeout=30,
     )
 
     response.raise_for_status()

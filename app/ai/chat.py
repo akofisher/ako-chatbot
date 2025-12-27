@@ -1,53 +1,31 @@
-from .model import load_model, tokenizer, model
-from .persona import PERSONA
-import torch
-from langdetect import detect
-from collections import deque
+# app/ai/chat.py
+import os
+import requests
 
-# ✅ ლიმიტირებული conversation (მეხსიერების დაცვა)
-conversation = deque(maxlen=6)  # ბოლო 6 შეტყობინება
-
-# ✅ model იტვირთება ერთხელ
-load_model()
-
-
-def detect_language(text: str) -> str:
-    try:
-        lang = detect(text)
-        return "Georgian" if lang == "ka" else "English"
-    except:
-        return "English"
-
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
 def generate_reply(message: str) -> str:
-    conversation.append(f"User: {message}")
+    response = requests.post(
+        "https://openrouter.ai/api/v1/chat/completions",
+        headers={
+            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://akofisher.github.io",
+            "X-Title": "Ako Portfolio Chatbot",
+        },
+        json={
+            "model": "mistralai/mistral-7b-instruct",
+            "messages": [
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": message},
+            ],
+            "temperature": 0.6,
+            "max_tokens": 200,
+        },
+        timeout=30,
+    )
 
-    user_lang = detect_language(message)
+    response.raise_for_status()
+    data = response.json()
 
-    prompt = f"""
-{PERSONA}
-
-Conversation:
-{chr(10).join(conversation)}
-
-Assistant ({user_lang}):
-"""
-
-    inputs = tokenizer(prompt, return_tensors="pt")
-
-    with torch.no_grad():
-        outputs = model.generate(
-            **inputs,
-            max_new_tokens=120,     # ⬇️ შემცირებული (ძალიან მნიშვნელოვანია)
-            temperature=0.6,
-            do_sample=True,
-            pad_token_id=tokenizer.eos_token_id
-        )
-
-    full_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
-
-    # მხოლოდ assistant პასუხის ამოღება
-    reply = full_text.split("Assistant")[-1].split(":")[-1].strip()
-
-    conversation.append(f"Assistant: {reply}")
-    return reply
+    return data["choices"][0]["message"]["content"]

@@ -1,31 +1,25 @@
-# app/ai/chat.py
 import os
 import requests
+from app.ai.persona import PERSONA
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
 def generate_reply(message: str) -> str:
     response = requests.post(
-        "https://openrouter.ai/api/v1/chat/completions",
+        "https://api.openrouter.ai/v1/chat/completions",
         headers={
             "Authorization": f"Bearer {OPENROUTER_API_KEY}",
             "Content-Type": "application/json",
-            "HTTP-Referer": "https://akofisher.github.io",
-            "X-Title": "Ako Portfolio Chatbot",
         },
         json={
-            "model": "mistralai/mistral-7b-instruct",
+            "model": "openai/gpt-3.5-turbo",
             "messages": [
-                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "system", "content": PERSONA},
                 {"role": "user", "content": message},
             ],
-            "temperature": 0.6,
-            "max_tokens": 200,
         },
-        timeout=30,
+        timeout=20,
     )
 
     response.raise_for_status()
-    data = response.json()
-
-    return data["choices"][0]["message"]["content"]
+    return response.json()["choices"][0]["message"]["content"]

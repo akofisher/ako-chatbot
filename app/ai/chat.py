@@ -1,29 +1,36 @@
 import os
-import requests
+from openai import OpenAI
+from langdetect import detect
 from app.ai.persona import PERSONA
 
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+conversation = []
+
+def detect_language(text: str) -> str:
+    try:
+        return "Georgian" if detect(text) == "ka" else "English"
+    except:
+        return "English"
 
 def generate_reply(message: str) -> str:
-    if not OPENROUTER_API_KEY:
-        return "Server error: API key missing"
+    user_lang = detect_language(message)
 
-    response = requests.post(
-        "https://api.openrouter.ai/v1/chat/completions",
-        headers={
-            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-            "Content-Type": "application/json",
-            "User-Agent": "AkoPortfolioChat/1.0",  
-        },
-        json={
-            "model": "openai/gpt-3.5-turbo",
-            "messages": [
-                {"role": "system", "content": PERSONA},
-                {"role": "user", "content": message},
-            ],
-        },
-        timeout=30,
+    conversation.append({"role": "user", "content": message})
+
+    messages = [
+        {"role": "system", "content": PERSONA},
+        *conversation[-6:]  # ბოლო 3 კითხვა/პასუხი
+    ]
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=messages,
+        temperature=0.6,
+        max_tokens=300,
     )
 
-    response.raise_for_status()
-    return response.json()["choices"][0]["message"]["content"]
+    reply = response.choices[0].message.content
+    conversation.append({"role": "assistant", "content": reply})
+
+    return reply
